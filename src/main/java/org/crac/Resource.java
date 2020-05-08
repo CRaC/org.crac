@@ -24,10 +24,18 @@
 
 package org.crac;
 
+/**
+ * TODO
+ */
 public interface Resource {
 
+    /**
+     * @throws Exception TODO
+     */
     void beforeCheckpoint() throws Exception;
 
+    /**
+     * @throws Exception TODO
+     */
     void afterRestore() throws Exception;
-
 }

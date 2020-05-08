@@ -25,235 +25,191 @@
 package org.crac;
 
 import java.lang.ref.WeakReference;
-import java.lang.ref.ReferenceQueue;
-import java.util.ArrayList;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.WeakHashMap;
 
 public class Core {
-    static class ResourceProxy extends WeakReference<Resource> implements java.lang.reflect.InvocationHandler {
-        private Object proxy;
-        private Object strong;
+    static class ResourceWrapper extends WeakReference<Resource> implements InvocationHandler {
+        private static WeakHashMap<Resource, ResourceWrapper> weakMap = new WeakHashMap<>();
 
-        private ResourceProxy(Resource obj, ReferenceQueue<Resource> refQueue) {
-            super(obj, refQueue);
+        // proxy weakly registered in JDK, so we need prevent it collection
+        private Object proxy;
+
+        // Create strong reference to avoid losing the Resource.
+        // It's set unconditionally in beforeCheckpoint and cleaned in afterRestore
+        // (latter is called regardless of beforeCheckpoint result).
+        private Resource strongRef;
+
+        public void setProxy(Object proxy) {
+            this.proxy = proxy;
         }
 
-        void setProxy(Object proxy) {
-            this.proxy = proxy;
+        public ResourceWrapper(Resource referent) {
+            super(referent);
+            weakMap.put(referent, this);
+            strongRef = null;
         }
 
         public Object invoke(Object proxy, Method m, Object[] args)
                 throws Throwable {
             String name = m.getName();
-            Resource obj = get();
-
             if ("beforeCheckpoint".equals(name)) {
-                strong = obj;
-                if (obj != null) {
-                    obj.beforeCheckpoint();
-                }
+                beforeCheckpoint();
                 return null;
             } else if ("afterRestore".equals(name)) {
-                if (obj != null) {
-                    obj.afterRestore();
-                }
-                strong = null;
+                afterRestore();
                 return null;
             } else if ("toString".equals(name)) {
-                return this.toString() + "[" + obj + "]";
+                return toString();
             } else {
                 try {
-                    return m.invoke(obj, args);
+                    return m.invoke(get(), args);
                 } catch (InvocationTargetException e) {
                     throw e.getCause();
                 }
             }
         }
+
+        private void beforeCheckpoint() throws Exception {
+            Resource r = get();
+            strongRef = r;
+            if (r != null) {
+                r.beforeCheckpoint();
+            }
+        }
+
+        private void afterRestore() throws Exception {
+            Resource r = get();
+            strongRef = null;
+            if (r != null) {
+                r.afterRestore();
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "org.crac.ResourceWrapper[" + get().toString() + "]";
+        }
     }
 
     static abstract class Compat {
+        protected Class clsResource;
+        protected Class clsContext;
+        protected Class clsCore;
+        protected Class clsCheckpointRestoreException;
+
         protected final Method tryCheckpointRestore;
         protected final Method register;
+        protected final Method getExceptions;
 
-        protected final Class resourceInterface;
+        protected final Object globalContext;
 
-        protected final Class checkpointException;
-        protected final Class openResourceException;
-        protected final Class openSocketException;
-        protected final Class openFileException;
-        protected final Class restoreException;
+        protected List<Exception> registerExceptions = new ArrayList<>();
 
-        protected final Method checkpointGetExceptions;
-        protected final Method restoreGetExceptions;
-        protected final Method openFileGetDetails;;
-        protected final Method openSocketGetDetails;;
-        protected final Method openResourceGetDetails;;
+        protected Compat(String pkg)
+                throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
-        private final ArrayList<ResourceProxy> resourceProxies = new ArrayList<>();
-        private final ReferenceQueue<Resource> resourceProxyQueue = new ReferenceQueue<>();
+            clsResource = Class.forName(pkg + ".Resource");
+            clsContext = Class.forName(pkg + ".Context");
+            clsCore = Class.forName(pkg + ".Core");
+            clsCheckpointRestoreException = Class.forName(pkg + ".CheckpointRestoreException");
 
-        private void cleanupResourceProxies() {
-            final boolean doCleanup = resourceProxyQueue.poll() != null;
-            if (doCleanup) {
-                while (resourceProxyQueue.poll() != null) { }
-                synchronized (resourceProxies) {
-                    resourceProxies.removeIf(r -> r.get() == null);
-                }
+            tryCheckpointRestore = clsCore.getMethod("tryCheckpointRestore");
+            register = clsContext.getMethod("register", clsResource);
+            getExceptions = clsCheckpointRestoreException.getMethod("getExceptions");
+
+            globalContext = clsCore.getMethod("getGlobalContext").invoke(null);
+        }
+
+        public void tryCheckpointRestore() throws CheckpointRestoreException {
+            if (registerExceptions.size() != 0) {
+                throw new CheckpointRestoreException(registerExceptions.toArray(new Exception[0]));
             }
-        }
-
-        protected Compat(String resourceInterfaceName, 
-                    String tryHolderName, 
-                    String registerHolderHame, 
-                    String exceptionsPackage)
-                throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException {
-
-            resourceInterface = Class.forName(resourceInterfaceName);
-
-            final Class tryHolder = Class.forName(tryHolderName);
-            tryCheckpointRestore = tryHolder.getMethod("tryCheckpointRestore");
-
-            final Class registerHolder = Class.forName(registerHolderHame);
-            register = registerHolder.getMethod("register", resourceInterface);
-
-            checkpointException = Class.forName(exceptionsPackage + ".CheckpointException");
-            openResourceException = Class.forName(exceptionsPackage + ".CheckpointOpenResourceException");
-            openSocketException = Class.forName(exceptionsPackage + ".CheckpointOpenSocketException");
-            openFileException = Class.forName(exceptionsPackage + ".CheckpointOpenFileException");
-            restoreException = Class.forName(exceptionsPackage + ".RestoreException");
-
-            checkpointGetExceptions = checkpointException.getMethod("getExceptions");
-            restoreGetExceptions = restoreException.getMethod("getExceptions");
-            openFileGetDetails = openFileException.getMethod("getDetails");
-            openSocketGetDetails = openSocketException.getMethod("getDetails");
-            openResourceGetDetails = openResourceException.getMethod("getDetails");
-        }
-
-        private String translateStringException(Exception exception, Method getExceptions) {
-            try {
-                return (String)getExceptions.invoke(exception);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                return e.toString();
-            }
-        }
-
-        private Exception[] translateCompoundException(Throwable t, Method getExceptions) {
-            try {
-                Exception[] rawExceptions = (Exception[])getExceptions.invoke(t);
-                Exception[] newExceptions = new Exception[rawExceptions.length];
-                for (int i = 0; i < rawExceptions.length; ++i) {
-                    Exception raw = rawExceptions[i];
-                    Exception newOne;
-                    if (openFileException.isInstance(rawExceptions[i])) {
-                        newOne = new CheckpointOpenFileException(translateStringException(raw, openFileGetDetails));
-                    } else if (openSocketException.isInstance(rawExceptions[i])) {
-                        newOne = new CheckpointOpenSocketException(translateStringException(raw, openSocketGetDetails));
-                    } else if (openResourceException.isInstance(raw)) {
-                        newOne = new CheckpointOpenResourceException(translateStringException(raw, openResourceGetDetails));
-                    } else {
-                        newOne = raw;
-                    }
-                    newExceptions[i] = newOne;
-                }
-                return newExceptions;
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                return new Exception[] { e };
-            }
-        }
-
-        public void tryCheckpointRestore() throws CheckpointException, RestoreException {
-
-            cleanupResourceProxies();
-
             try {
                 tryCheckpointRestore.invoke(null);
-            } catch (InvocationTargetException ite) {
-                Throwable t = ite.getCause();
-                if (checkpointException.isInstance(t)) {
-                    throw new CheckpointException(translateCompoundException(t, checkpointGetExceptions));
-                } else if (restoreException.isInstance(t)) {
-                    throw new RestoreException(translateCompoundException(t, restoreGetExceptions));
-                } else {
-                    t.printStackTrace();
+            } catch (InvocationTargetException | IllegalAccessException ite) {
+                Exception throwExc = ite;
+                if (clsCheckpointRestoreException.isInstance(ite.getCause())) {
+                    try {
+                        throw new CheckpointRestoreException((Exception[]) getExceptions.invoke(ite.getCause()));
+                    } catch (InvocationTargetException | IllegalAccessException ite2) {
+                        throwExc = ite2;
+                    }
                 }
-            } catch (Throwable t) {
-                t.printStackTrace();
+                throw new CheckpointRestoreException(new Exception[] { throwExc });
             }
-
-            cleanupResourceProxies();
         }
 
         public void register(Resource resource) {
-
-            cleanupResourceProxies();
-
             // JDK register will maintain weak ref on proxy, so we have provide
-            // it and resourceProxy same lifetime as enclosed Resource have.
-            // ResourceProxy and proxy will have strongs links on each other.
-            // ResourceProxy will also have weak ref on Resource.
+            // it and resourceWrapper same lifetime as enclosed Resource have.
+            // ResourceWrapper and proxy will have strongs links on each other.
+            // ResourceWrapper will also have weak ref on Resource.
             // All ResourceProxies are strongly reachable via resourceProxies.
-            // The list cleaned ocassionally. Strong ref to ResourceProxy cleared
+            // The list cleaned ocassionally. Strong ref to ResourceWrapper cleared
             // when its Resource became unreachable.
-            ResourceProxy resourceProxy = new ResourceProxy(resource, resourceProxyQueue);
-            Object proxy = Proxy.newProxyInstance(
-                    Compat.class.getClassLoader(),
-                    new Class[] { resourceInterface },
-                    resourceProxy);
-            resourceProxy.setProxy(proxy);
-            synchronized (resourceProxies) {
-                resourceProxies.add(resourceProxy);
-            }
-
             try {
-                register.invoke(null, proxy);
-            } catch (Throwable t) {
-                t.printStackTrace();
+                ResourceWrapper resourceWrapper = new ResourceWrapper(resource);
+                Object proxy = Proxy.newProxyInstance(
+                        Compat.class.getClassLoader(),
+                        new Class[]{clsResource},
+                        resourceWrapper);
+                resourceWrapper.setProxy(proxy);
+                register.invoke(globalContext, proxy);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                registerExceptions.add(e);
             }
         }
     }
 
     static class CompatMaster extends Compat {
-        CompatMaster() throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException {
-            super("jdk.crac.Resource", "jdk.crac.Core", "jdk.crac.Core", "jdk.crac");
+        CompatMaster() throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
+                InvocationTargetException {
+            super("javax.crac");
         }
     }
 
     static class CompatZulu8 extends Compat {
-        CompatZulu8() throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException {
-            super("com.azul.crac.Resource", "com.azul.crac.Core", "com.azul.crac.Core", "com.azul.crac");
+        CompatZulu8() throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
+                InvocationTargetException {
+            super("jdk.crac");
         }
     }
 
+    static final Context<Resource> globalContextWrapper = new GlobalContextWrapper();
     static final Compat compat;
+
     static {
-        Compat candidate = null;
+        Compat candidate;
         try {
             candidate = new CompatMaster();
         } catch (Throwable t) {
-        }
-        if (candidate == null) {
             try {
                 candidate = new CompatZulu8();
-            } catch (Throwable t) {
+            } catch (Throwable t2) {
+                candidate = null;
             }
         }
-
         compat = candidate;
     }
 
-    public static void tryCheckpointRestore() throws
-            CheckpointException,
-            RestoreException {
-        if (compat != null) {
-            compat.tryCheckpointRestore();
-        } else {
-            throw new CheckpointException(new Exception[] { new UnsupportedOperationException() });
-        }
+    public static Context<Resource> getGlobalContext() {
+        return globalContextWrapper;
     }
 
-    public static void register(Resource r) {
+    public static void tryCheckpointRestore() throws CheckpointRestoreException, UnsupportedOperationException {
+        if (compat == null) {
+            throw new UnsupportedOperationException();
+        }
+        compat.tryCheckpointRestore();
+    }
+
+    static void register(Resource r) {
         if (compat != null) {
             compat.register(r);
         }
