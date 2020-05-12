@@ -17,6 +17,6 @@ jobs:
       with:
         java-version: 1.8
     - run: mvn -B package
-    - run: mvn deploy -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/org-crac/org.crac
+    - run: mvn -B deploy -X -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/org-crac/org.crac
       env:
         GITHUB_TOKEN: ${{ github.GITHUB_TOKEN }}
