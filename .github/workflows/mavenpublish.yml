@@ -17,6 +17,6 @@ jobs:
         java-version: 1.8
     - run: mvn -B package
     - run: cat ~/.m2/settings.xml
-    - run: mvn -B deploy -X -DaltDeploymentRepository=github::https://maven.pkg.github.com/org-crac/org.crac
+    - run: mvn -B deploy -X -e -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/org-crac/org.crac
       env:
         GITHUB_TOKEN: ${{ github.GITHUB_TOKEN }}
