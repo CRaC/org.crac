@@ -3,13 +3,6 @@ package org.crac;
 /**
  * TODO
  */
-public class CheckpointException extends CheckpointRestoreException {
-    private static final long serialVersionUID = 0;
-
-    /**
-     * @param exceptions TODO
-     */
-    public CheckpointException(Exception[] exceptions) {
-        super(exceptions);
-    }
+public class CheckpointException extends Exception {
+    private static final long serialVersionUID = 6066461284002648920L;
 }

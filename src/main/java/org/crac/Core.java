@@ -104,11 +104,11 @@ public class Core {
         protected Class clsResource;
         protected Class clsContext;
         protected Class clsCore;
-        protected Class clsCheckpointRestoreException;
+        protected Class clsCheckpointException;
+        protected Class clsRestoreException;
 
         protected final Method tryCheckpointRestore;
         protected final Method register;
-        protected final Method getExceptions;
 
         protected final Object globalContext;
 
@@ -120,31 +120,42 @@ public class Core {
             clsResource = Class.forName(pkg + ".Resource");
             clsContext = Class.forName(pkg + ".Context");
             clsCore = Class.forName(pkg + ".Core");
-            clsCheckpointRestoreException = Class.forName(pkg + ".CheckpointRestoreException");
+            clsCheckpointException = Class.forName(pkg + ".CheckpointException");
+            clsRestoreException = Class.forName(pkg + ".RestoreException");
 
             tryCheckpointRestore = clsCore.getMethod("tryCheckpointRestore");
             register = clsContext.getMethod("register", clsResource);
-            getExceptions = clsCheckpointRestoreException.getMethod("getExceptions");
 
             globalContext = clsCore.getMethod("getGlobalContext").invoke(null);
         }
 
-        public void tryCheckpointRestore() throws CheckpointRestoreException {
+        public void tryCheckpointRestore() throws
+                CheckpointException, RestoreException {
             if (registerExceptions.size() != 0) {
-                throw new CheckpointRestoreException(registerExceptions.toArray(new Exception[0]));
+                CheckpointException checkpointException = new CheckpointException();
+                checkpointException.addSuppressed(new UnsupportedOperationException());
+                throw checkpointException;
             }
             try {
                 tryCheckpointRestore.invoke(null);
             } catch (InvocationTargetException | IllegalAccessException ite) {
-                Exception throwExc = ite;
-                if (clsCheckpointRestoreException.isInstance(ite.getCause())) {
-                    try {
-                        throw new CheckpointRestoreException((Exception[]) getExceptions.invoke(ite.getCause()));
-                    } catch (InvocationTargetException | IllegalAccessException ite2) {
-                        throwExc = ite2;
+                if (clsCheckpointException.isInstance(ite.getCause())) {
+                    CheckpointException checkpointException = new CheckpointException();
+                    for (Throwable t : ite.getCause().getSuppressed()) {
+                        checkpointException.addSuppressed(t);
                     }
+                    throw checkpointException;
+                } else if (clsRestoreException.isInstance(ite.getCause())) {
+                    RestoreException restoreException = new RestoreException();
+                    for (Throwable t : ite.getCause().getSuppressed()) {
+                        restoreException.addSuppressed(t);
+                    }
+                    throw restoreException;
+                } else {
+                    CheckpointException checkpointException = new CheckpointException();
+                    checkpointException.addSuppressed(ite);
+                    throw checkpointException;
                 }
-                throw new CheckpointRestoreException(new Exception[] { throwExc });
             }
         }
 
@@ -202,7 +213,8 @@ public class Core {
         return globalContextWrapper;
     }
 
-    public static void tryCheckpointRestore() throws CheckpointRestoreException, UnsupportedOperationException {
+    public static void tryCheckpointRestore() throws
+            CheckpointException, RestoreException {
         if (compat == null) {
             throw new UnsupportedOperationException();
         }
