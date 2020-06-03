@@ -4,7 +4,7 @@
   <groupId>org.crac</groupId>
   <artifactId>crac</artifactId>
   <packaging>jar</packaging>
-  <version>0.1</version>
+  <version>999-SNAPSHOT</version>
   <name>crac</name>
   <url>http://maven.apache.org</url>
   <properties>
