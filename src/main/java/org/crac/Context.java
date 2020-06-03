@@ -3,15 +3,23 @@ package org.crac;
 /**
  * TODO
  */
-public interface Context<R extends Resource> extends Resource {
-    @Override
-    void beforeCheckpoint() throws CheckpointException;
+public abstract class Context<R extends Resource> implements Resource {
+
+    /** The only constructor.
+     */
+    protected Context() {
+    }
 
     @Override
-    void afterRestore() throws RestoreException;
+    public abstract void beforeCheckpoint(Context<? extends Resource> context)
+            throws CheckpointException;
+
+    @Override
+    public abstract void afterRestore(Context<? extends Resource> context)
+            throws RestoreException;
 
     /**
-     * @param r TODO
+     * @param resource TODO
      */
-    void register(R r);
+    public abstract void register(R resource);
 }

@@ -1,17 +1,19 @@
 package org.crac;
 
-class GlobalContextWrapper implements Context<Resource> {
-    @Override
-    public void beforeCheckpoint() throws CheckpointException {
-        throw new RuntimeException("should not call this");
-    }
-
-    @Override
-    public void afterRestore() throws RestoreException {
-        throw new RuntimeException("should not call this");
-    }
-
+class GlobalContextWrapper extends Context<Resource> {
     GlobalContextWrapper() {
+    }
+
+    @Override
+    public void beforeCheckpoint(Context<? extends Resource> context) throws CheckpointException {
+        throw new RuntimeException("should not call this");
+
+    }
+
+    @Override
+    public void afterRestore(Context<? extends Resource> context) throws RestoreException {
+        throw new RuntimeException("should not call this");
+
     }
 
     @Override

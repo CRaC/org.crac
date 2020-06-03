@@ -32,10 +32,10 @@ public interface Resource {
     /**
      * @throws Exception TODO
      */
-    void beforeCheckpoint() throws Exception;
+    void beforeCheckpoint(Context<? extends Resource> context) throws Exception;
 
     /**
      * @throws Exception TODO
      */
-    void afterRestore() throws Exception;
+    void afterRestore(Context<? extends Resource> context) throws Exception;
 }

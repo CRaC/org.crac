@@ -34,6 +34,9 @@ import java.util.List;
 import java.util.WeakHashMap;
 
 public class Core {
+    static private final Context<Resource> globalContextWrapper = new GlobalContextWrapper();
+    static private final Compat compat;
+
     static class ResourceWrapper extends WeakReference<Resource> implements InvocationHandler {
         private static WeakHashMap<Resource, ResourceWrapper> weakMap = new WeakHashMap<>();
 
@@ -79,7 +82,7 @@ public class Core {
             Resource r = get();
             strongRef = r;
             if (r != null) {
-                r.beforeCheckpoint();
+                r.beforeCheckpoint(globalContextWrapper);
             }
         }
 
@@ -87,7 +90,7 @@ public class Core {
             Resource r = get();
             strongRef = null;
             if (r != null) {
-                r.afterRestore();
+                r.afterRestore(globalContextWrapper);
             }
         }
 
@@ -180,9 +183,6 @@ public class Core {
             super("jdk.crac");
         }
     }
-
-    static final Context<Resource> globalContextWrapper = new GlobalContextWrapper();
-    static final Compat compat;
 
     static {
         Compat candidate;
