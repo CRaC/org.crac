@@ -107,7 +107,7 @@ public class Core {
         protected Class clsCheckpointException;
         protected Class clsRestoreException;
 
-        protected final Method tryCheckpointRestore;
+        protected final Method checkpointRestore;
         protected final Method register;
 
         protected final Object globalContext;
@@ -123,21 +123,19 @@ public class Core {
             clsCheckpointException = Class.forName(pkg + ".CheckpointException");
             clsRestoreException = Class.forName(pkg + ".RestoreException");
 
-            tryCheckpointRestore = clsCore.getMethod("tryCheckpointRestore");
+            checkpointRestore = clsCore.getMethod("checkpointRestore");
             register = clsContext.getMethod("register", clsResource);
 
             globalContext = clsCore.getMethod("getGlobalContext").invoke(null);
         }
 
-        public void tryCheckpointRestore() throws
+        public void checkpointRestore() throws
                 CheckpointException, RestoreException {
             if (registerExceptions.size() != 0) {
-                CheckpointException checkpointException = new CheckpointException();
-                checkpointException.addSuppressed(new UnsupportedOperationException());
-                throw checkpointException;
+		throw new UnsupportedOperationException();
             }
             try {
-                tryCheckpointRestore.invoke(null);
+                checkpointRestore.invoke(null);
             } catch (InvocationTargetException | IllegalAccessException ite) {
                 if (clsCheckpointException.isInstance(ite.getCause())) {
                     CheckpointException checkpointException = new CheckpointException();
@@ -188,8 +186,8 @@ public class Core {
         }
     }
 
-    static class CompatZulu8 extends Compat {
-        CompatZulu8() throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
+    static class CompatJdk extends Compat {
+        CompatJdk() throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
                 InvocationTargetException {
             super("jdk.crac");
         }
@@ -201,7 +199,7 @@ public class Core {
             candidate = new CompatMaster();
         } catch (Throwable t) {
             try {
-                candidate = new CompatZulu8();
+                candidate = new CompatJdk();
             } catch (Throwable t2) {
                 candidate = null;
             }
@@ -213,12 +211,12 @@ public class Core {
         return globalContextWrapper;
     }
 
-    public static void tryCheckpointRestore() throws
+    public static void checkpointRestore() throws
             CheckpointException, RestoreException {
         if (compat == null) {
             throw new UnsupportedOperationException();
         }
-        compat.tryCheckpointRestore();
+        compat.checkpointRestore();
     }
 
     static void register(Resource r) {
