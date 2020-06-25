@@ -1,4 +1,4 @@
-// Copyright 2017-2019 Azul Systems, Inc.
+// Copyright 2017-2020 Azul Systems, Inc.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -24,18 +24,9 @@
 
 package org.crac;
 
-/**
- * TODO
- */
 public interface Resource {
 
-    /**
-     * @throws Exception TODO
-     */
     void beforeCheckpoint(Context<? extends Resource> context) throws Exception;
 
-    /**
-     * @throws Exception TODO
-     */
     void afterRestore(Context<? extends Resource> context) throws Exception;
 }
