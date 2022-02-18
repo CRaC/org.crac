@@ -24,6 +24,26 @@
 
 package org.crac;
 
+/**
+ * Suppresses exceptions thrown during checkpoint notification.
+ */
 public class CheckpointException extends Exception {
     private static final long serialVersionUID = 6066461284002648920L;
+
+    /**
+     * Creates a {@code CheckpointException}.
+     */
+    public CheckpointException() {
+        super();
+    }
+
+    /**
+     * Constructs a {@code CheckpointException} with the specified
+     * detail message.
+     *
+     * @param message the detail message.
+     */
+    public CheckpointException(String message) {
+        super(message);
+    }
 }

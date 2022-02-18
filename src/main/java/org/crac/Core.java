@@ -33,6 +33,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.WeakHashMap;
 
+/**
+ * The coordination service.
+ */
 public class Core {
     static private final Context<Resource> globalContextWrapper = new GlobalContextWrapper();
     static private final Compat compat;
@@ -207,10 +210,27 @@ public class Core {
         compat = candidate;
     }
 
+    /**
+     * Gets the global {@code Context} for checkpoint/restore notifications.
+     *
+     * @return the global {@code Context}
+     */
     public static Context<Resource> getGlobalContext() {
         return globalContextWrapper;
     }
 
+    /**
+     * Requests checkpoint and returns upon a successful restore.
+     * May throw an exception if the checkpoint or restore are unsuccessful.
+     *
+     * @throws CheckpointException if an exception occured during checkpoint
+     * notification and the execution continues in the original Java instance.
+     * @throws RestoreException if an exception occured during restore
+     * notification and execution continues in a new Java instance.
+     * @throws UnsupportedOperationException if checkpoint/restore is not
+     * supported, no notification performed and the execution continues in
+     * the original Java instance.
+     */
     public static void checkpointRestore() throws
             CheckpointException, RestoreException {
         if (compat == null) {
