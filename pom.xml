@@ -4,10 +4,10 @@
 
   <groupId>io.github.crac</groupId>
   <artifactId>org-crac</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <packaging>jar</packaging>
 
-  <name>crac-compat</name>
+  <name>org-crac</name>
   <description>A wrapper for OpenJDK CRaC API to build and run on any JDK</description>
   <url>https://github.com/crac/org.crac</url>
 

@@ -1,5 +1,21 @@
 # org.crac
 
+## Use
+
+```
+<dependency>
+  <groupId>io.github.crac</groupId>
+  <artifactId>org-crac</artifactId>
+  <version>0.1.1</version>
+</dependency>
+```
+
+## Javadoc
+
+https://javadoc.io/doc/io.github.crac/org-crac/latest/index.html
+
+## Description
+
 The org.crac is designed to provide smooth CRaC adoption.
 Users of the library can build against and use CRaC API on Java runtimes with `jdk.crac`, `javax.crac`, or without any implementation.
 * In compile-time, `org.crac` package totally mirrors `jdk.crac` and `javax.crac`.
