@@ -185,7 +185,7 @@ public class Core {
     static Compat loadCompat(String packageName) {
         try {
             return new Compat(packageName);
-        } catch (Throwable t) {
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             return null;
         }
     }
