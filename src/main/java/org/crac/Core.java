@@ -26,8 +26,8 @@ package org.crac;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +41,7 @@ public class Core {
     static private final Compat compat;
 
     static class ResourceWrapper extends WeakReference<Resource> implements InvocationHandler {
-        private static WeakHashMap<Resource, ResourceWrapper> weakMap = new WeakHashMap<>();
+        private static final WeakHashMap<Resource, ResourceWrapper> weakMap = new WeakHashMap<>();
 
         // proxy weakly registered in JDK, so we need prevent it collection
         private Object proxy;
@@ -103,7 +103,7 @@ public class Core {
         }
     }
 
-    static abstract class Compat {
+    static class Compat {
         protected Class clsResource;
         protected Class clsContext;
         protected Class clsCore;
@@ -135,7 +135,7 @@ public class Core {
         public void checkpointRestore() throws
                 CheckpointException, RestoreException {
             if (registerExceptions.size() != 0) {
-		throw new UnsupportedOperationException();
+                throw new UnsupportedOperationException();
             }
             try {
                 checkpointRestore.invoke(null);
@@ -161,12 +161,12 @@ public class Core {
         }
 
         public void register(Resource resource) {
-            // JDK register will maintain weak ref on proxy, so we have provide
+            // JDK register will maintain weak ref on proxy, so we have to provide
             // it and resourceWrapper same lifetime as enclosed Resource have.
-            // ResourceWrapper and proxy will have strongs links on each other.
+            // ResourceWrapper and proxy will have strong links on each other.
             // ResourceWrapper will also have weak ref on Resource.
             // All ResourceProxies are strongly reachable via resourceProxies.
-            // The list cleaned ocassionally. Strong ref to ResourceWrapper cleared
+            // The list cleaned occasionally. Strong ref to ResourceWrapper cleared
             // when its Resource became unreachable.
             try {
                 ResourceWrapper resourceWrapper = new ResourceWrapper(resource);
@@ -182,31 +182,29 @@ public class Core {
         }
     }
 
-    static class CompatMaster extends Compat {
-        CompatMaster() throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
-                InvocationTargetException {
-            super("javax.crac");
-        }
-    }
-
-    static class CompatJdk extends Compat {
-        CompatJdk() throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
-                InvocationTargetException {
-            super("jdk.crac");
+    static Compat loadCompat(String packageName) {
+        try {
+            return new Compat(packageName);
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            return null;
         }
     }
 
     static {
-        Compat candidate;
-        try {
-            candidate = new CompatMaster();
-        } catch (Throwable t) {
-            try {
-                candidate = new CompatJdk();
-            } catch (Throwable t2) {
-                candidate = null;
-            }
+        Compat candidate = null;
+        String propCompatImpl = System.getProperty("org.crac.Core.Compat");
+        if (propCompatImpl != null) {
+            candidate = loadCompat(propCompatImpl);
         }
+
+        if (candidate == null) {
+            candidate = loadCompat("javax.crac");
+        }
+
+        if (candidate == null) {
+            candidate = loadCompat("jdk.crac");
+        }
+
         compat = candidate;
     }
 
@@ -223,13 +221,13 @@ public class Core {
      * Requests checkpoint and returns upon a successful restore.
      * May throw an exception if the checkpoint or restore are unsuccessful.
      *
-     * @throws CheckpointException if an exception occured during checkpoint
-     * notification and the execution continues in the original Java instance.
-     * @throws RestoreException if an exception occured during restore
-     * notification and execution continues in a new Java instance.
+     * @throws CheckpointException           if an exception occurred during checkpoint
+     *                                       notification and the execution continues in the original Java instance.
+     * @throws RestoreException              if an exception occurred during restore
+     *                                       notification and execution continues in a new Java instance.
      * @throws UnsupportedOperationException if checkpoint/restore is not
-     * supported, no notification performed and the execution continues in
-     * the original Java instance.
+     *                                       supported, no notification performed and the execution continues in
+     *                                       the original Java instance.
      */
     public static void checkpointRestore() throws
             CheckpointException, RestoreException {
