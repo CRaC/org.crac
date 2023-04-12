@@ -4,15 +4,15 @@
 
 ```
 <dependency>
-  <groupId>io.github.crac</groupId>
-  <artifactId>org-crac</artifactId>
+  <groupId>org.crac</groupId>
+  <artifactId>crac</artifactId>
   <version>0.1.3</version>
 </dependency>
 ```
 
 ## Javadoc
 
-https://javadoc.io/doc/io.github.crac/org-crac/latest/index.html
+https://javadoc.io/doc/org.crac/crac/latest/index.html
 
 ## Description
 
