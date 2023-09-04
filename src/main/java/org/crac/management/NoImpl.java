@@ -26,6 +26,10 @@ package org.crac.management;
 
 import javax.management.ObjectName;
 
+/**
+ * On a VM without CRaC implementation, the checkpoint and restoration are impossible.
+ * So a simple implementation reporting no restoration has happened is valid.
+ */
 class NoImpl implements CRaCMXBean {
 
     @Override
