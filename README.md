@@ -2,13 +2,7 @@
 
 ## Use
 
-```
-<dependency>
-  <groupId>org.crac</groupId>
-  <artifactId>crac</artifactId>
-  <version>1.3.0</version>
-</dependency>
-```
+https://central.sonatype.com/artifact/org.crac/crac
 
 ## Javadoc
 
