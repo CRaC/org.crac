@@ -55,7 +55,6 @@ public interface CRaCMXBean extends PlatformManagedObject {
     /**
      * Returns the implementation of the MXBean.
      *
-     * @throws UnsupportedOperationException if the virtual machine does not provide MXBean implementation
      * @return implementation of the MXBean.
      */
     public static CRaCMXBean getCRaCMXBean() {
@@ -63,17 +62,16 @@ public interface CRaCMXBean extends PlatformManagedObject {
         try {
             iface = Class.forName("jdk.crac.management.CRaCMXBean");
         } catch (ClassNotFoundException e) {
-            throw new UnsupportedOperationException(e);
+            return new NoImpl();
         }
         PlatformManagedObject impl = ManagementFactory.getPlatformMXBean(iface);
         if (impl == null) {
-            throw new UnsupportedOperationException(
-                    "Platform CRaCMXBean found, but no Platform MXBean implementation");
+            return new NoImpl();
         }
         try {
             return new CRaCImpl(iface, impl);
         } catch (NoSuchMethodException e) {
-            throw new UnsupportedOperationException(e);
+            return new NoImpl();
         }
     }
 }
