@@ -46,8 +46,12 @@ public abstract class Context<R extends Resource> implements Resource {
     public abstract void afterRestore(Context<? extends Resource> context)
             throws RestoreException;
 
-    /**
-     * Registers a {@code Resource} with this {@code Context}.
+     /**
+     * Registers a {@code Resource} with this {@code Context}
+      *
+     * <p> Context maintains a weak reference to registered Resource, thus client code must maintain a strong reference
+      * to the Resource to guarantee `beforeCheckpoint` and `afterRestore` methods execution.
+      * Otherwise, depending on garbage collector cycles, they may or may not be executed.
      *
      * @param resource {@code Resource} to be registered.
      * @throws NullPointerException if {@code resource} is {@code null}
