@@ -112,6 +112,7 @@ public class Core {
 
         protected final Method checkpointRestore;
         protected final Method register;
+        protected final Method getNestedExceptions;
 
         protected final Object globalContext;
 
@@ -130,6 +131,14 @@ public class Core {
             register = clsContext.getMethod("register", clsResource);
 
             globalContext = clsCore.getMethod("getGlobalContext").invoke(null);
+
+            Method getNestedExceptions;
+            try {
+                getNestedExceptions = clsCheckpointException.getMethod("getNestedExceptions");
+            } catch (NoSuchMethodException e) {
+                getNestedExceptions = clsCheckpointException.getMethod("getSuppressed");
+            }
+            this.getNestedExceptions = getNestedExceptions;
         }
 
         public void checkpointRestore() throws
@@ -140,22 +149,29 @@ public class Core {
             try {
                 checkpointRestore.invoke(null);
             } catch (InvocationTargetException | IllegalAccessException ite) {
-                if (clsCheckpointException.isInstance(ite.getCause())) {
-                    CheckpointException checkpointException = new CheckpointException();
-                    for (Throwable t : ite.getCause().getSuppressed()) {
-                        checkpointException.addSuppressed(t);
+                try {
+                    if (clsCheckpointException.isInstance(ite.getCause())) {
+                        CheckpointException checkpointException = new CheckpointException();
+                        for (Throwable t : (Throwable[]) getNestedExceptions.invoke(ite.getCause())) {
+                            checkpointException.addSuppressed(t);
+                        }
+                        throw checkpointException;
+                    } else if (clsRestoreException.isInstance(ite.getCause())) {
+                        RestoreException restoreException = new RestoreException();
+                        for (Throwable t : (Throwable[]) getNestedExceptions.invoke(ite.getCause())) {
+                            restoreException.addSuppressed(t);
+                        }
+                        throw restoreException;
+                    } else {
+                        CheckpointException checkpointException = new CheckpointException();
+                        checkpointException.addSuppressed(ite);
+                        throw checkpointException;
                     }
-                    throw checkpointException;
-                } else if (clsRestoreException.isInstance(ite.getCause())) {
-                    RestoreException restoreException = new RestoreException();
-                    for (Throwable t : ite.getCause().getSuppressed()) {
-                        restoreException.addSuppressed(t);
-                    }
-                    throw restoreException;
-                } else {
-                    CheckpointException checkpointException = new CheckpointException();
-                    checkpointException.addSuppressed(ite);
-                    throw checkpointException;
+                } catch (InvocationTargetException | IllegalAccessException e) {
+                    CheckpointException ex = new CheckpointException("Cannot remap original exceptions");
+                    ex.addSuppressed(e);
+                    ex.addSuppressed(ite);
+                    throw ex;
                 }
             }
         }
