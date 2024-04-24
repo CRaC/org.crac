@@ -1,4 +1,4 @@
-// Copyright 2017-2020 Azul Systems, Inc.
+// Copyright 2017-2024 Azul Systems, Inc.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -25,25 +25,25 @@
 package org.crac;
 
 /**
- * Suppresses exceptions thrown during checkpoint notification.
+ * This exception works as an aggregate for all errors found during checkpoint;
+ * these are recorded as {@linkplain #getNestedExceptions() nested exceptions}.
+ * The exception does not have any own message, cause nor collects stack trace.
  */
-public class CheckpointException extends Exception {
-    private static final long serialVersionUID = 6066461284002648920L;
+public class CheckpointException extends ExceptionBase {
+    private static final long serialVersionUID = 6066461284002648921L;
 
     /**
      * Creates a {@code CheckpointException}.
      */
     public CheckpointException() {
-        super();
+        super((String) null);
     }
 
     /**
-     * Constructs a {@code CheckpointException} with the specified
-     * detail message.
-     *
-     * @param message the detail message.
+     * Create exception with provided nested exceptions.
+     * @param nested Nested exceptions.
      */
-    public CheckpointException(String message) {
-        super(message);
+    public CheckpointException(Throwable[] nested) {
+        super(nested);
     }
 }

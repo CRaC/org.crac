@@ -3,7 +3,7 @@
 
   <groupId>org.crac</groupId>
   <artifactId>crac</artifactId>
-  <version>1.4.1-SNAPSHOT</version>
+  <version>2.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>crac</name>
@@ -47,9 +47,16 @@
   <properties>
     <maven.compiler.target>1.8</maven.compiler.target>
     <maven.compiler.source>1.8</maven.compiler.source>
+    <version.testng>7.10.1</version.testng>
   </properties>
 
   <dependencies>
+      <dependency>
+          <groupId>org.testng</groupId>
+          <artifactId>testng</artifactId>
+          <version>${version.testng}</version>
+          <scope>test</scope>
+      </dependency>
   </dependencies>
 
   <build>
@@ -63,6 +70,15 @@
 	  <scmCommentPrefix>[release]</scmCommentPrefix>
 	  <pushChanges>false</pushChanges>
         </configuration>
+      </plugin>
+      <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.2.5</version>
+          <configuration>
+              <!-- Disabling CRTrace to avoid "Corrupted channel by directly writing to native stream in forked JVM" -->
+              <argLine>-XX:CREngine=simengine -XX:CRaCCheckpointTo=ignored -XX:-CRTrace</argLine>
+          </configuration>
       </plugin>
     </plugins>
   </build>
