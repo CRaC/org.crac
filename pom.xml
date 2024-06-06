@@ -60,9 +60,34 @@
         <version>3.0.1</version>
         <configuration>
           <tagNameFormat>@{project.version}</tagNameFormat>
-	  <scmCommentPrefix>[release]</scmCommentPrefix>
-	  <pushChanges>false</pushChanges>
+          <scmCommentPrefix>[release]</scmCommentPrefix>
+          <pushChanges>false</pushChanges>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>biz.aQute.bnd</groupId>
+        <artifactId>bnd-maven-plugin</artifactId>
+        <version>6.4.0</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <bnd><![CDATA[
+              -noextraheaders: true
+              -noimportjava: true
+              Bundle-Name: org.crac
+              Bundle-SymbolicName: org.crac
+              Import-Package: javax.crac;resolution:=optional, jdk.crac;resolution:=optional, jdk.crac.management;resolution:=optional, *
+              package-version=${versionmask;===;${Bundle-Version}}
+              Export-Package: *;version="${package-version}";-noimport:=true
+              -jpms-module-info: org.crac;version="${package-version}"
+              ]]></bnd>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
