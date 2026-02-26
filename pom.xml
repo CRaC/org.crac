@@ -50,6 +50,12 @@
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>7.10.1</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -88,6 +94,17 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.3</version>
+        <configuration>
+          <includes>
+            <include>**/*Test.java</include>
+          </includes>
+          <argLine>-XX:+IgnoreUnrecognizedVMOptions -XX:CRaCEngine=simengine -XX:CRaCCheckpointTo=${project.build.directory}/cr</argLine>
+        </configuration>
       </plugin>
     </plugins>
   </build>

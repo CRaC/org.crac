@@ -25,6 +25,8 @@
 package org.crac;
 
 class GlobalContextWrapper extends Context<Resource> {
+    static final Context<Resource> instance = new GlobalContextWrapper();
+
     GlobalContextWrapper() {
     }
 
@@ -37,12 +39,14 @@ class GlobalContextWrapper extends Context<Resource> {
     @Override
     public void afterRestore(Context<? extends Resource> context) throws RestoreException {
         throw new RuntimeException("should not call this");
-
     }
 
     @Override
     public void register(Resource r) {
-        Core.register(r);
+        Proxy proxy = Proxy.instance;
+        if (proxy != null) {
+            proxy.register(r);
+        }
     }
 }
 

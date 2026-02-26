@@ -24,6 +24,11 @@
 
 package org.crac.management;
 
+import org.crac.CheckpointException;
+import org.crac.Core;
+import org.crac.Proxy;
+import org.crac.RestoreException;
+
 import javax.management.ObjectName;
 import java.lang.management.PlatformManagedObject;
 import java.lang.reflect.InvocationTargetException;
@@ -34,12 +39,20 @@ class CRaCImpl implements CRaCMXBean {
     private final PlatformManagedObject platformImpl;
     private final Method getUptimeSinceRestore;
     private final Method getRestoreTime;
+    private final Method checkpointRestore;
 
-    CRaCImpl(Class iface, PlatformManagedObject platformImpl)
+    CRaCImpl(Class<?> iface, PlatformManagedObject platformImpl)
             throws NoSuchMethodException {
         this.platformImpl = platformImpl;
         this.getUptimeSinceRestore = iface.getMethod("getUptimeSinceRestore");
         this.getRestoreTime = iface.getMethod("getRestoreTime");
+        Method cr = null;
+        try {
+            cr = iface.getMethod("checkpointRestore");
+        } catch (NoSuchMethodException e) {
+            // ignored; we'll use Core.checkpointRestore()
+        }
+        this.checkpointRestore = cr;
     }
 
     @Override
@@ -57,6 +70,27 @@ class CRaCImpl implements CRaCMXBean {
             return (long)getRestoreTime.invoke(platformImpl);
         } catch (IllegalAccessException | InvocationTargetException e) {
             return -1;
+        }
+    }
+
+    @Override
+    public boolean isImplemented() {
+        return true;
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public void checkpointRestore() throws CheckpointException, RestoreException {
+        if (checkpointRestore != null) {
+            try {
+                checkpointRestore.invoke(platformImpl);
+            } catch (IllegalAccessException e) {
+                Proxy.instance.handleExceptionFromCheckpoint(e);
+            } catch (InvocationTargetException e) {
+                Proxy.instance.handleExceptionFromCheckpoint(e);
+            }
+        } else {
+            Core.checkpointRestore();
         }
     }
 

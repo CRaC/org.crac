@@ -43,6 +43,16 @@ class NoImpl implements CRaCMXBean {
     }
 
     @Override
+    public boolean isImplemented() {
+        return false;
+    }
+
+    @Override
+    public void checkpointRestore() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public ObjectName getObjectName() {
         return null;
     }

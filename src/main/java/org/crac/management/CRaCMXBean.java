@@ -24,6 +24,9 @@
 
 package org.crac.management;
 
+import org.crac.CheckpointException;
+import org.crac.RestoreException;
+
 import java.lang.management.ManagementFactory;
 import java.lang.management.PlatformManagedObject;
 import java.lang.management.RuntimeMXBean;
@@ -40,7 +43,7 @@ public interface CRaCMXBean extends PlatformManagedObject {
      * @see RuntimeMXBean#getStartTime()
      * @return uptime of the Java virtual machine in milliseconds.
      */
-    public long getUptimeSinceRestore();
+    long getUptimeSinceRestore();
 
     /**
      * Returns the time when the Java virtual machine restore was initiated.
@@ -50,21 +53,44 @@ public interface CRaCMXBean extends PlatformManagedObject {
      * @see RuntimeMXBean#getUptime()
      * @return start time of the Java virtual machine in milliseconds.
      */
-    public long getRestoreTime();
+    long getRestoreTime();
+
+    /**
+     * Checks whether current JDK implements CRaC. The {@link #checkpointRestore()} method
+     * would throw an {@link UnsupportedOperationException} if it is not supported.
+     *
+     * @return true if the JDK implements CRaC functionality.
+     */
+    boolean isImplemented();
+
+    /**
+     * Requests checkpoint and returns upon a successful restore.
+     * May throw an exception if the checkpoint or restore are unsuccessful.
+     *
+     * @throws CheckpointException           if an exception occurred during checkpoint
+     *                                       notification and the execution continues in the original Java instance.
+     * @throws RestoreException              if an exception occurred during restore
+     *                                       notification and execution continues in a new Java instance.
+     * @throws UnsupportedOperationException if checkpoint/restore is not
+     *                                       supported, no notification performed and the execution continues in
+     *                                       the original Java instance.
+     */
+    void checkpointRestore() throws CheckpointException, RestoreException;
 
     /**
      * Returns the implementation of the MXBean.
      *
      * @return implementation of the MXBean.
      */
-    public static CRaCMXBean getCRaCMXBean() {
-        Class iface;
+    static CRaCMXBean getCRaCMXBean() {
+        Class<?> iface;
         try {
             iface = Class.forName("jdk.crac.management.CRaCMXBean");
         } catch (ClassNotFoundException e) {
             return new NoImpl();
         }
-        PlatformManagedObject impl = ManagementFactory.getPlatformMXBean(iface);
+        @SuppressWarnings("unchecked")
+        PlatformManagedObject impl = ManagementFactory.getPlatformMXBean((Class<? extends PlatformManagedObject>) iface);
         if (impl == null) {
             return new NoImpl();
         }

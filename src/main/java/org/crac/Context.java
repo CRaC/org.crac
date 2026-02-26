@@ -31,7 +31,27 @@ package org.crac;
  *
  * <p>A {@code Context} implementor is encouraged to respect properties of the global {@code Context}.
  */
+// FIXME: This abstract class should rather be an interface, but this is a breaking change
 public abstract class Context<R extends Resource> implements Resource {
+
+    /**
+     * Gets the global {@code Context} for checkpoint/restore notifications.
+     *
+     * @return the global {@code Context}
+     */
+    public static Context<Resource> getGlobalContext() {
+        return GlobalContextWrapper.instance;
+    }
+
+    /**
+     * Checks whether current JDK implements CRaC. This is useful if creating the {@link Resource} is expensive
+     * or if the application requires different implementation to support CRaC.
+     *
+     * @return True if the JDK implements CRaC functionality.
+     */
+    public static boolean isImplemented() {
+        return Proxy.instance != null;
+    }
 
     /** Creates a {@code Context}.
      */
