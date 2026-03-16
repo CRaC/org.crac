@@ -26,6 +26,7 @@ package org.crac.management;
 
 import org.crac.CheckpointException;
 import org.crac.RestoreException;
+import org.crac.impl.Proxy;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.PlatformManagedObject;
@@ -94,8 +95,13 @@ public interface CRaCMXBean extends PlatformManagedObject {
         if (impl == null) {
             return new NoImpl();
         }
+        Proxy proxy = Proxy.instance;
+        if (proxy == null) {
+            // We got the CRaCMXBean but Proxy instantiation failed?
+            throw new IllegalStateException();
+        }
         try {
-            return new CRaCImpl(iface, impl);
+            return new CRaCImpl(proxy, iface, impl);
         } catch (NoSuchMethodException e) {
             return new NoImpl();
         }

@@ -1,4 +1,31 @@
-package org.crac;
+// Copyright 2017, 2026 Azul Systems, Inc.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+package org.crac.impl;
+
+import org.crac.CheckpointException;
+import org.crac.Resource;
+import org.crac.RestoreException;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -9,20 +36,20 @@ import java.util.List;
 public class Proxy {
     public static final Proxy instance;
 
-    protected Class<?> clsResource;
-    protected Class<?> clsContext;
-    protected Class<?> clsCore;
-    protected Class<?> clsCheckpointException;
-    protected Class<?> clsRestoreException;
+    private final Class<?> clsResource;
+    private final Class<?> clsContext;
+    private final Class<?> clsCore;
+    private final Class<?> clsCheckpointException;
+    private final Class<?> clsRestoreException;
 
-    protected final Method checkpointRestore;
-    protected final Method register;
+    private final Method checkpointRestore;
+    private final Method register;
 
-    protected final Object globalContext;
+    private final Object globalContext;
 
-    protected List<Exception> registerExceptions = new ArrayList<>();
+    private final List<Exception> registerExceptions = new ArrayList<>();
 
-    static Proxy loadProxy(String packageName) {
+    private static Proxy loadProxy(String packageName) {
         try {
             return new Proxy(packageName);
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
@@ -48,7 +75,7 @@ public class Proxy {
         instance = candidate;
     }
 
-    protected Proxy(String pkg)
+    private Proxy(String pkg)
             throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         clsResource = Class.forName(pkg + ".Resource");
@@ -77,10 +104,15 @@ public class Proxy {
         register = clsContext.getMethod("register", clsResource);
     }
 
-    void checkpointRestore() throws
+    public void checkpointRestore() throws
             CheckpointException, RestoreException {
-        if (!registerExceptions.isEmpty()) {
-            throw new UnsupportedOperationException();
+        synchronized (this) {
+            if (!registerExceptions.isEmpty()) {
+                UnsupportedOperationException ex = new UnsupportedOperationException();
+                registerExceptions.forEach(ex::addSuppressed);
+                registerExceptions.clear();
+                throw ex;
+            }
         }
         try {
             checkpointRestore.invoke(null);
@@ -132,7 +164,9 @@ public class Proxy {
             resourceWrapper.setProxy(proxy);
             register.invoke(globalContext, proxy);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            registerExceptions.add(e);
+            synchronized (this) {
+                registerExceptions.add(e);
+            }
         }
     }
 }

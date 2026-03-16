@@ -1,4 +1,4 @@
-// Copyright 2017-2020 Azul Systems, Inc.
+// Copyright 2017, 2026 Azul Systems, Inc.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -23,6 +23,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 package org.crac;
+
+import org.crac.impl.GlobalContextWrapper;
+import org.crac.impl.Proxy;
 
 /**
  * A {@code Resource} that allows other {@code Resource}s to be registered with it.

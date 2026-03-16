@@ -1,4 +1,4 @@
-// Copyright 2017-2020 Azul Systems, Inc.
+// Copyright 2017-2026 Azul Systems, Inc.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -24,11 +24,15 @@
 
 package org.crac;
 
+import org.crac.impl.Proxy;
 import org.crac.management.CRaCMXBean;
 
 /**
  * The coordination service.
+ *
+ * @deprecated Use {@link Context#getGlobalContext()}  or {@link CRaCMXBean#checkpointRestore()}
  */
+@Deprecated
 public class Core {
     /**
      * Gets the global {@code Context} for checkpoint/restore notifications.
@@ -38,7 +42,7 @@ public class Core {
      */
     @Deprecated
     public static Context<Resource> getGlobalContext() {
-        return GlobalContextWrapper.instance;
+        return Context.getGlobalContext();
     }
 
     /**
