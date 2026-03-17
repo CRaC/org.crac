@@ -47,8 +47,6 @@ public class Proxy {
 
     private final Object globalContext;
 
-    private final List<Exception> registerExceptions = new ArrayList<>();
-
     private static Proxy loadProxy(String packageName) {
         try {
             return new Proxy(packageName);
@@ -106,14 +104,6 @@ public class Proxy {
 
     public void checkpointRestore() throws
             CheckpointException, RestoreException {
-        synchronized (this) {
-            if (!registerExceptions.isEmpty()) {
-                UnsupportedOperationException ex = new UnsupportedOperationException();
-                registerExceptions.forEach(ex::addSuppressed);
-                registerExceptions.clear();
-                throw ex;
-            }
-        }
         try {
             checkpointRestore.invoke(null);
         } catch (IllegalAccessException iae) {
@@ -163,10 +153,10 @@ public class Proxy {
                     resourceWrapper);
             resourceWrapper.setProxy(proxy);
             register.invoke(globalContext, proxy);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            synchronized (this) {
-                registerExceptions.add(e);
-            }
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException(e.getCause());
         }
     }
 }

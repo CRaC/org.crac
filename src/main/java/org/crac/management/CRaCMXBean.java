@@ -97,8 +97,7 @@ public interface CRaCMXBean extends PlatformManagedObject {
         }
         Proxy proxy = Proxy.instance;
         if (proxy == null) {
-            // We got the CRaCMXBean but Proxy instantiation failed?
-            throw new IllegalStateException();
+            throw new IllegalStateException("Proxy instantiation failed (CRaCMXBean present but incompatible JDK?)");
         }
         try {
             return new CRaCImpl(proxy, iface, impl);
