@@ -50,6 +50,12 @@
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>7.12.0</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -89,6 +95,17 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.5</version>
+        <configuration>
+          <includes>
+            <include>**/*Test.java</include>
+          </includes>
+          <argLine>-XX:+IgnoreUnrecognizedVMOptions -XX:CRaCEngine=simengine -XX:CRaCCheckpointTo=${project.build.directory}/cr</argLine>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
@@ -100,7 +117,7 @@
 	  <plugin>
 	    <groupId>org.apache.maven.plugins</groupId>
 	    <artifactId>maven-source-plugin</artifactId>
-	    <version>2.2.1</version>
+	    <version>3.4.0</version>
 	    <executions>
 	      <execution>
 		<id>attach-sources</id>
@@ -113,7 +130,7 @@
 	  <plugin>
 	    <groupId>org.apache.maven.plugins</groupId>
 	    <artifactId>maven-javadoc-plugin</artifactId>
-	    <version>2.9.1</version>
+	    <version>3.11.2</version>
 	    <executions>
 	      <execution>
 		<id>attach-javadocs</id>

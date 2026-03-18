@@ -1,4 +1,4 @@
-// Copyright 2022 Azul Systems, Inc.
+// Copyright 2022, 2026 Azul Systems, Inc.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -24,22 +24,37 @@
 
 package org.crac.management;
 
+import org.crac.CheckpointException;
+import org.crac.impl.Proxy;
+import org.crac.RestoreException;
+
 import javax.management.ObjectName;
 import java.lang.management.PlatformManagedObject;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Objects;
 
 class CRaCImpl implements CRaCMXBean {
 
+    private final Proxy proxy;
     private final PlatformManagedObject platformImpl;
     private final Method getUptimeSinceRestore;
     private final Method getRestoreTime;
+    private final Method checkpointRestore;
 
-    CRaCImpl(Class iface, PlatformManagedObject platformImpl)
+    CRaCImpl(Proxy proxy, Class<?> iface, PlatformManagedObject platformImpl)
             throws NoSuchMethodException {
-        this.platformImpl = platformImpl;
+        this.proxy = Objects.requireNonNull(proxy);
+        this.platformImpl = Objects.requireNonNull(platformImpl);
         this.getUptimeSinceRestore = iface.getMethod("getUptimeSinceRestore");
         this.getRestoreTime = iface.getMethod("getRestoreTime");
+        Method cr = null;
+        try {
+            cr = iface.getMethod("checkpointRestore");
+        } catch (NoSuchMethodException e) {
+            // ignored; we'll use Core.checkpointRestore()
+        }
+        this.checkpointRestore = cr;
     }
 
     @Override
@@ -57,6 +72,26 @@ class CRaCImpl implements CRaCMXBean {
             return (long)getRestoreTime.invoke(platformImpl);
         } catch (IllegalAccessException | InvocationTargetException e) {
             return -1;
+        }
+    }
+
+    @Override
+    public boolean isImplemented() {
+        return true;
+    }
+
+    @Override
+    public void checkpointRestore() throws CheckpointException, RestoreException {
+        if (checkpointRestore != null) {
+            try {
+                checkpointRestore.invoke(platformImpl);
+            } catch (IllegalAccessException e) {
+                proxy.handleExceptionFromCheckpoint(e);
+            } catch (InvocationTargetException e) {
+                proxy.handleExceptionFromCheckpoint(e);
+            }
+        } else {
+            proxy.checkpointRestore();
         }
     }
 

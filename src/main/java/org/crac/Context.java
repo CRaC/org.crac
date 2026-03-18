@@ -1,4 +1,4 @@
-// Copyright 2017-2020 Azul Systems, Inc.
+// Copyright 2017, 2026 Azul Systems, Inc.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -24,6 +24,9 @@
 
 package org.crac;
 
+import org.crac.impl.GlobalContextWrapper;
+import org.crac.impl.Proxy;
+
 /**
  * A {@code Resource} that allows other {@code Resource}s to be registered with it.
  *
@@ -31,7 +34,27 @@ package org.crac;
  *
  * <p>A {@code Context} implementor is encouraged to respect properties of the global {@code Context}.
  */
+// FIXME: This abstract class should rather be an interface, but this is a breaking change
 public abstract class Context<R extends Resource> implements Resource {
+
+    /**
+     * Gets the global {@code Context} for checkpoint/restore notifications.
+     *
+     * @return the global {@code Context}
+     */
+    public static Context<Resource> getGlobalContext() {
+        return GlobalContextWrapper.instance;
+    }
+
+    /**
+     * Checks whether current JDK implements CRaC. This is useful if creating the {@link Resource} is expensive
+     * or if the application requires different implementation to support CRaC.
+     *
+     * @return True if the JDK implements CRaC functionality.
+     */
+    public static boolean isImplemented() {
+        return Proxy.instance != null;
+    }
 
     /** Creates a {@code Context}.
      */
